@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Red v6.0</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+</head>
+<body>
+
+<div class="container">
+    <!-- 🔝 BARRA SUPERIOR COMPACTA -->
+    <header class="toolbar">
+
+        <!-- Grupos de dispositivos: app.js::buildToolbar() los inserta ANTES del primer .tool-group -->
+        <!-- Este grupo de acciones queda al final -->
+        <div class="tool-group" id="actions-group">
+
+            <!-- Modos -->
+            <button class="btn mode-btn" id="cableMode" title="Cable (C)">
+                <span class="icon">🔗</span><span class="btn-label">Cable</span>
+            </button>
+            <button class="btn mode-btn" id="delCableMode" title="Cortar cable">
+                <span class="icon">✂️</span><span class="btn-label">Cortar</span>
+            </button>
+            <button class="btn mode-btn" id="panMode" title="Pan (Alt+clic)">
+                <span class="icon">✋</span><span class="btn-label">Mover</span>
+            </button>
+            <button class="btn mode-btn" id="textMode" title="Texto">
+                <span class="icon">📝</span><span class="btn-label">Texto</span>
+            </button>
+            <button class="btn danger" id="deleteMode" title="Eliminar equipo (Supr)">
+                <span class="icon">🗑️</span><span class="btn-label">Borrar</span>
+            </button>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- Zoom -->
+            <button class="btn" id="zoomIn" title="Acercar (+)">
+                <span class="icon">🔍</span><span class="btn-label">+</span>
+            </button>
+            <button class="btn" id="zoomOut" title="Alejar (-)">
+                <span class="icon">🔎</span><span class="btn-label">−</span>
+            </button>
+            <button class="btn" id="zoomReset" title="Zoom 100%">
+                <span class="icon">⊙</span><span class="btn-label">100%</span>
+            </button>
+            <button class="btn" id="fitAll" title="Ajustar todo (F)">
+                <span class="icon">⛶</span><span class="btn-label">Fit</span>
+            </button>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- Persistencia -->
+            <button class="btn" id="saveNet" title="Guardar">
+                <span class="icon">💾</span><span class="btn-label">Guardar</span>
+            </button>
+            <button class="btn" id="loadNet" title="Cargar">
+                <span class="icon">📂</span><span class="btn-label">Cargar</span>
+            </button>
+            <button class="btn" id="exportNet" title="Exportar JSON">
+                <span class="icon">📤</span><span class="btn-label">Exportar</span>
+            </button>
+            <label class="btn" title="Importar JSON" style="cursor:pointer">
+                <span class="icon">📥</span><span class="btn-label">Importar</span>
+                <input type="file" id="importFile" accept=".json" style="display:none">
+            </label>
+            <button class="btn danger" id="clearAll" title="Limpiar todo">
+                <span class="icon">🧹</span><span class="btn-label">Limpiar</span>
+            </button>
+
+            <div class="toolbar-divider"></div>
+
+            <!-- Simulación -->
+            <button class="btn" id="startSimulation" title="Iniciar simulación">
+                <span class="icon">▶</span><span class="btn-label">Simular</span>
+            </button>
+            <button class="btn" id="stopSimulation" title="Detener">
+                <span class="icon">⏹</span><span class="btn-label">Parar</span>
+            </button>
+
+            <div class="toolbar-divider"></div>
+
+            <button class="btn" id="darkModeToggle" title="Cambiar tema">
+                <span class="icon">☀️</span><span class="btn-label">Claro</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 🖥️ AREA PRINCIPAL -->
+    <div class="main-area">
+
+        <!-- Canvas -->
+        <div class="canvas-container" id="canvas-container">
+            <canvas id="networkCanvas"></canvas>
+
+            <!-- Estado flotante -->
+            <div class="canvas-hud">
+                <span class="hud-label">MODO:</span>
+                <span class="hud-value" id="modeStatus">Selección</span>
+                <span class="hud-sep"></span>
+                <span class="hud-label">Equipos:</span>
+                <span class="hud-value" id="deviceCount">0</span>
+                <span class="hud-sep"></span>
+                <span class="hud-label">Cables:</span>
+                <span class="hud-value" id="connectionCount">0</span>
+                <span class="hud-sep"></span>
+                <span class="hud-label">Pkts:</span>
+                <span class="hud-value" id="packetCount">0</span>
+                <span class="hud-sep"></span>
+                <span class="hud-label">Red:</span>
+                <span class="hud-value status-value" id="connectionStatus">Detenido</span>
+            </div>
+
+            <!-- Mini ayuda -->
+            <div class="canvas-hint">
+                C=cable · F=fit · Alt+clic=pan · Rueda=zoom · Supr=borrar
+            </div>
+        </div>
+
+        <!-- Panel Lateral Derecho -->
+        <aside class="config-panel">
+            <div class="panel-header">
+                <h3>Configuración</h3>
+                <span class="panel-subtitle" id="selectedDeviceInfo">Ningún equipo seleccionado</span>
+            </div>
+
+            <div class="panel-tabs">
+                <button class="tab-btn active" data-tab="props">Propiedades</button>
+                <button class="tab-btn" data-tab="iface">Interfaces</button>
+                <button class="tab-btn" data-tab="stats">Stats</button>
+            </div>
+
+            <div class="panel-content">
+                <!-- Props -->
+                <div class="tab-content active" id="tab-props">
+                    <div id="propertyContent">
+                        <p class="info-message" style="margin-top:16px;text-align:center;line-height:1.8">
+                            Selecciona un equipo<br>
+                            <small style="color:var(--text-dim)">Doble clic → interfaces</small>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Interfaces -->
+                <div class="tab-content" id="tab-iface">
+                    <div id="interfacesList">
+                        <div class="info-message">Selecciona un equipo para ver sus interfaces.</div>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="tab-content" id="tab-stats">
+                    <div id="deviceStats">
+                        <div class="info-message">Sin estadísticas aún.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consola -->
+            <div class="console-section">
+                <div class="console-toggle" id="consoleToggle">
+                    <h4>⬛ CONSOLA</h4>
+                    <span class="chevron">▴</span>
+                </div>
+                <div class="console-body">
+                    <div class="cmd-quick">
+                        <button class="cmd-btn" data-cmd="ping ">ping</button>
+                        <button class="cmd-btn" data-cmd="tracert ">tracert</button>
+                        <button class="cmd-btn" data-cmd="ipconfig">ipconfig</button>
+                        <button class="cmd-btn" data-cmd="show interfaces">show if</button>
+                        <button class="cmd-btn" data-cmd="show arp">show arp</button>
+                        <button class="cmd-btn" data-cmd="dhcp request">dhcp</button>
+                    </div>
+                    <div class="console-output" id="consoleOutput"></div>
+                    <div class="console-input-wrap">
+                        <span class="prompt"><span id="consoleDevice">sys</span>&gt;</span>
+                        <input type="text" id="consoleInput" placeholder="ping 192.168.1.1" autocomplete="off" spellcheck="false">
+                        <button id="sendCommand" class="send-btn">↵</button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Tooltip de puertos -->
+<div id="portTooltip" style="display:none;position:fixed;z-index:900;pointer-events:none;"></div>
+
+<script src="js/engine.js"></script>
+<script src="js/devices.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/network.js"></script>
+<script src="js/console.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
